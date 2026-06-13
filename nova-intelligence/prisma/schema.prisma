@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  DENTIST
+  RECEPTIONIST
+}
+
+enum OpportunityStatus {
+  ACTIVE
+  WON
+  LOST
+  RECOVERED
+}
+
+enum InteractionType {
+  WHATSAPP
+  PHONE
+  VISIT
+  EMAIL
+}
+
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  patients     Patient[]
+  leadSources  LeadSource[]
+  opportunities Opportunity[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(RECEPTIONIST)
+  avatarUrl String?
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  interactions Interaction[]
+}
+
+model Patient {
+  id            String    @id @default(cuid())
+  name          String
+  phone         String?
+  email         String?
+  cpf           String?
+  birthDate     DateTime?
+  clinicId      String
+  clinic        Clinic    @relation(fields: [clinicId], references: [id])
+  leadSourceId  String?
+  leadSource    LeadSource? @relation(fields: [leadSourceId], references: [id])
+  lastVisitAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  opportunities Opportunity[]
+  interactions  Interaction[]
+}
+
+model LeadSource {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patients     Patient[]
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id              String            @id @default(cuid())
+  treatmentName   String
+  estimatedValue  Float
+  status          OpportunityStatus @default(ACTIVE)
+  notes           String?
+  patientId       String
+  patient         Patient           @relation(fields: [patientId], references: [id])
+  leadSourceId    String?
+  leadSource      LeadSource?       @relation(fields: [leadSourceId], references: [id])
+  clinicId        String
+  clinic          Clinic            @relation(fields: [clinicId], references: [id])
+  lastContactAt   DateTime?
+  wonAt           DateTime?
+  lostAt          DateTime?
+  recoveredAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  interactions Interaction[]
+}
+
+model Interaction {
+  id            String          @id @default(cuid())
+  type          InteractionType
+  notes         String?
+  patientId     String
+  patient       Patient         @relation(fields: [patientId], references: [id])
+  opportunityId String?
+  opportunity   Opportunity?    @relation(fields: [opportunityId], references: [id])
+  userId        String?
+  user          User?           @relation(fields: [userId], references: [id])
+  createdAt     DateTime        @default(now())
+}
