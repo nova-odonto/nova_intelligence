@@ -1,4 +1,3 @@
-import { cn } from '@/lib/utils'
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface MetricCardProps {
@@ -6,37 +5,9 @@ interface MetricCardProps {
   value: string
   subtitle?: string
   icon?: LucideIcon
-  trend?: number // percent change
+  trend?: number
   variant?: 'default' | 'success' | 'danger' | 'warning' | 'primary'
   className?: string
-}
-
-const variantStyles = {
-  default: {
-    container: 'bg-white border-zinc-100',
-    icon: 'bg-zinc-100 text-zinc-500',
-    value: 'text-zinc-900',
-  },
-  success: {
-    container: 'bg-white border-zinc-100',
-    icon: 'bg-emerald-50 text-emerald-600',
-    value: 'text-emerald-700',
-  },
-  danger: {
-    container: 'bg-white border-zinc-100',
-    icon: 'bg-red-50 text-red-500',
-    value: 'text-red-600',
-  },
-  warning: {
-    container: 'bg-white border-zinc-100',
-    icon: 'bg-amber-50 text-amber-600',
-    value: 'text-amber-700',
-  },
-  primary: {
-    container: 'bg-indigo-600 border-indigo-600',
-    icon: 'bg-indigo-500 text-white',
-    value: 'text-white',
-  },
 }
 
 export function MetricCard({
@@ -48,39 +19,85 @@ export function MetricCard({
   variant = 'default',
   className,
 }: MetricCardProps) {
-  const styles = variantStyles[variant]
   const isPrimary = variant === 'primary'
+
+  const valueColor = {
+    default: 'var(--text)',
+    success: '#2D7A47',
+    danger: 'var(--primary)',
+    warning: '#B45309',
+    primary: '#fff',
+  }[variant]
+
+  const iconBg = {
+    default: 'var(--bg)',
+    success: 'rgba(45,122,71,0.08)',
+    danger: 'var(--primary-soft)',
+    warning: 'rgba(180,83,9,0.08)',
+    primary: 'rgba(255,255,255,0.15)',
+  }[variant]
+
+  const iconColor = {
+    default: 'var(--text-muted)',
+    success: '#2D7A47',
+    danger: 'var(--primary)',
+    warning: '#B45309',
+    primary: '#fff',
+  }[variant]
 
   return (
     <div
-      className={cn(
-        'rounded-xl border p-5 flex flex-col gap-3 shadow-sm',
-        styles.container,
-        className
-      )}
+      className={`flex flex-col gap-3 p-5 ${className ?? ''}`}
+      style={{
+        background: isPrimary ? 'var(--primary)' : 'var(--card)',
+        border: `1px solid ${isPrimary ? 'var(--primary)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
     >
       <div className="flex items-start justify-between">
-        <p
-          className={cn(
-            'text-xs font-medium uppercase tracking-wide',
-            isPrimary ? 'text-indigo-200' : 'text-zinc-500'
-          )}
-        >
+        <p style={{
+          fontSize: '10px',
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: isPrimary ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
+        }}>
           {title}
         </p>
         {Icon && (
-          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', styles.icon)}>
-            <Icon className="w-4 h-4" />
+          <div style={{
+            width: '30px',
+            height: '30px',
+            background: iconBg,
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Icon style={{ width: '14px', height: '14px', color: iconColor }} />
           </div>
         )}
       </div>
 
       <div>
-        <p className={cn('text-2xl font-bold tracking-tight', styles.value)}>{value}</p>
+        <p style={{
+          fontFamily: "'Instrument Serif', Georgia, serif",
+          fontSize: '34px',
+          fontWeight: 400,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.1,
+          color: valueColor,
+        }}>
+          {value}
+        </p>
         {subtitle && (
-          <p
-            className={cn('text-xs mt-0.5', isPrimary ? 'text-indigo-300' : 'text-zinc-400')}
-          >
+          <p style={{
+            fontSize: '12px',
+            marginTop: '4px',
+            color: isPrimary ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
+          }}>
             {subtitle}
           </p>
         )}
@@ -88,19 +105,16 @@ export function MetricCard({
 
       {trend !== undefined && (
         <div className="flex items-center gap-1">
-          {trend >= 0 ? (
-            <TrendingUp className="w-3 h-3 text-emerald-500" />
-          ) : (
-            <TrendingDown className="w-3 h-3 text-red-400" />
-          )}
-          <span
-            className={cn(
-              'text-xs font-medium',
-              trend >= 0 ? 'text-emerald-600' : 'text-red-500'
-            )}
-          >
-            {trend >= 0 ? '+' : ''}
-            {trend.toFixed(1)}% vs mês anterior
+          {trend >= 0
+            ? <TrendingUp style={{ width: '12px', height: '12px', color: '#2D7A47' }} />
+            : <TrendingDown style={{ width: '12px', height: '12px', color: 'var(--primary)' }} />
+          }
+          <span style={{
+            fontSize: '12px',
+            fontWeight: 500,
+            color: trend >= 0 ? '#2D7A47' : 'var(--primary)',
+          }}>
+            {trend >= 0 ? '+' : ''}{trend.toFixed(1)}% vs mês anterior
           </span>
         </div>
       )}

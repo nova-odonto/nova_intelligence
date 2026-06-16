@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -41,6 +42,8 @@ model Clinic {
   patients     Patient[]
   leadSources  LeadSource[]
   opportunities Opportunity[]
+  dentists     Dentist[]
+  appointments Appointment[]
 }
 
 model User {
@@ -50,6 +53,7 @@ model User {
   password  String
   role      Role     @default(RECEPTIONIST)
   avatarUrl String?
+  lastBriefingAt DateTime?
   clinicId  String
   clinic    Clinic   @relation(fields: [clinicId], references: [id])
   createdAt DateTime @default(now())
@@ -75,6 +79,7 @@ model Patient {
 
   opportunities Opportunity[]
   interactions  Interaction[]
+  appointments Appointment[]
 }
 
 model LeadSource {
@@ -123,4 +128,63 @@ model Interaction {
   userId        String?
   user          User?           @relation(fields: [userId], references: [id])
   createdAt     DateTime        @default(now())
+}
+// ─── AGENDA ────────────────────────────────────────────────
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Dentist {
+  id           String         @id @default(cuid())
+  clinicId     String
+  name         String
+  specialty    String?
+  clinic       Clinic         @relation(fields: [clinicId], references: [id])
+  appointments Appointment[]
+  schedules    WorkSchedule[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model WorkSchedule {
+  id           String  @id @default(cuid())
+  dentistId    String
+  dayOfWeek    Int     // 0=Dom, 1=Seg ... 6=Sáb
+  startTime    String  // "08:00"
+  endTime      String  // "18:00"
+  slotMinutes  Int     @default(30)
+  dentist      Dentist @relation(fields: [dentistId], references: [id])
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  clinicId     String
+  patientId    String
+  dentistId    String?
+  startAt      DateTime
+  endAt        DateTime
+  status       AppointmentStatus @default(SCHEDULED)
+  type         String            // "consulta", "retorno", "implante"...
+  notes        String?
+  createdViaAI Boolean           @default(false)
+  clinic       Clinic            @relation(fields: [clinicId], references: [id])
+  patient      Patient           @relation(fields: [patientId], references: [id])
+  dentist      Dentist?          @relation(fields: [dentistId], references: [id])
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+model WhatsappConversation {
+  id        String   @id @default(cuid())
+  phone     String
+  clinicId  String
+  messages  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone, clinicId])
 }

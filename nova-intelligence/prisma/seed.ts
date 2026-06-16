@@ -23,6 +23,9 @@ function generatePhone(): string {
 async function main() {
   console.log('🌱 Iniciando seed...')
 
+  await prisma.appointment.deleteMany()
+  await prisma.workSchedule.deleteMany()
+  await prisma.dentist.deleteMany()
   await prisma.interaction.deleteMany()
   await prisma.opportunity.deleteMany()
   await prisma.patient.deleteMany()
@@ -57,13 +60,56 @@ async function main() {
     data: { name: 'Fernanda Lima', email: 'fernanda@novaodontologia.com.br', password: 'hashed_admin123', role: 'RECEPTIONIST', clinicId: clinic.id },
   })
 
+  // ── DENTISTAS ──
+  const dentistaTamires = await prisma.dentist.create({
+    data: { name: 'Dra. Tamires Freire', specialty: 'Implantodontia', clinicId: clinic.id }
+  })
+
+  const dentistaCarlos = await prisma.dentist.create({
+    data: { name: 'Dr. Carlos Mendes', specialty: 'Ortodontia', clinicId: clinic.id }
+  })
+
+  console.log('✅ Dentistas criados')
+
+  // ── HORÁRIOS DE TRABALHO (Seg-Sex 08:00-18:00, slots 30min) ──
+  const diasUteis = [1, 2, 3, 4, 5] // Seg a Sex
+
+  for (const dentist of [dentistaTamires, dentistaCarlos]) {
+    for (const day of diasUteis) {
+      await prisma.workSchedule.create({
+        data: {
+          dentistId: dentist.id,
+          dayOfWeek: day,
+          startTime: '08:00',
+          endTime: '18:00',
+          slotMinutes: 30,
+        }
+      })
+    }
+  }
+
+  // Dra. Tamires também atende sábado 08:00-12:00
+  await prisma.workSchedule.create({
+    data: {
+      dentistId: dentistaTamires.id,
+      dayOfWeek: 6,
+      startTime: '08:00',
+      endTime: '12:00',
+      slotMinutes: 30,
+    }
+  })
+
+  console.log('✅ Horários de trabalho criados')
+
+  // ── LEAD SOURCES ──
   const sourceNames = ['MedPrev','Instagram','Google','Indicação','Site']
   const leadSources = await Promise.all(
-    sourceNames.map((name, i) => prisma.leadSource.create({
+    sourceNames.map((name) => prisma.leadSource.create({
       data: { name, description: `Origem: ${name}`, clinicId: clinic.id }
     }))
   )
 
+  // ── PACIENTES ──
   const now = new Date()
   const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
   const patients = []
@@ -92,6 +138,38 @@ async function main() {
 
   console.log(`✅ Pacientes: ${patients.length}`)
 
+  // ── AGENDAMENTOS DE EXEMPLO ──
+  const hoje = new Date()
+  const agendamentos = [
+    { dentist: dentistaTamires, patient: patients[0], hora: '09:00', tipo: 'consulta' },
+    { dentist: dentistaTamires, patient: patients[1], hora: '10:00', tipo: 'retorno' },
+    { dentist: dentistaCarlos, patient: patients[2], hora: '09:30', tipo: 'ortodontia' },
+    { dentist: dentistaCarlos, patient: patients[3], hora: '14:00', tipo: 'consulta' },
+  ]
+
+  for (const a of agendamentos) {
+    const startAt = new Date(hoje)
+    const [h, m] = a.hora.split(':').map(Number)
+    startAt.setHours(h, m, 0, 0)
+    const endAt = new Date(startAt)
+    endAt.setMinutes(endAt.getMinutes() + 30)
+
+    await prisma.appointment.create({
+      data: {
+        clinicId: clinic.id,
+        patientId: a.patient.id,
+        dentistId: a.dentist.id,
+        startAt,
+        endAt,
+        type: a.tipo,
+        status: 'SCHEDULED',
+      }
+    })
+  }
+
+  console.log('✅ Agendamentos de exemplo criados')
+
+  // ── OPORTUNIDADES ──
   const statuses = ['ACTIVE','ACTIVE','ACTIVE','WON','WON','LOST','RECOVERED']
   const opportunities = []
 
@@ -123,6 +201,7 @@ async function main() {
 
   console.log(`✅ Oportunidades: ${opportunities.length}`)
 
+  // ── INTERAÇÕES ──
   const interactionTypes = ['WHATSAPP','WHATSAPP','PHONE','VISIT','EMAIL']
   const interactionNotes = ['Enviou mensagem sobre orçamento','Confirmou consulta','Cancelou, vai remarcar','Compareceu para avaliação','Tirou dúvidas sobre o procedimento','Solicitou novo agendamento','Enviou documentos solicitados']
 
@@ -143,20 +222,9 @@ async function main() {
     })
   }
 
-  console.log(`✅ Interações: 200`)
-
-  const recovered = opportunities.filter(o => o.status === 'RECOVERED')
-  const active = opportunities.filter(o => o.status === 'ACTIVE')
-  const won = opportunities.filter(o => o.status === 'WON')
-  const lost = opportunities.filter(o => o.status === 'LOST')
-
-  console.log('\n📊 Resumo:')
-  console.log(`  Recuperado: R$ ${recovered.reduce((s,o) => s+o.estimatedValue,0).toFixed(0)}`)
-  console.log(`  Em Risco: R$ ${active.reduce((s,o) => s+o.estimatedValue,0).toFixed(0)}`)
-  console.log(`  Ganho: R$ ${won.reduce((s,o) => s+o.estimatedValue,0).toFixed(0)}`)
-  console.log(`  Perdido: R$ ${lost.reduce((s,o) => s+o.estimatedValue,0).toFixed(0)}`)
+  console.log('✅ Interações: 200')
   console.log('\n🎉 Seed concluído!')
-  console.log('\nLogin: tamires@novaodontologia.com.br / admin123')
+  console.log('Login: tamires@novaodontologia.com.br / admin123')
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect())
