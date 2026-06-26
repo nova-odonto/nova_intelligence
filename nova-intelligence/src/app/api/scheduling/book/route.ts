@@ -5,7 +5,7 @@ import { addMinutes } from 'date-fns'
 export async function POST(req: NextRequest) {
   const { patientId, dentistId, clinicId, date, time, type, createdViaAI } = await req.json()
 
-  const startAt = new Date(`${date}T${time}:00`)
+  const startAt = new Date(`${date}T${time}:00-03:00`)
   const endAt = addMinutes(startAt, 30)
 
   const conflict = await prisma.appointment.findFirst({

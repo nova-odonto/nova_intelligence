@@ -38,48 +38,52 @@ model Clinic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users        User[]
-  patients     Patient[]
-  leadSources  LeadSource[]
+  users         User[]
+  patients      Patient[]
+  leadSources   LeadSource[]
   opportunities Opportunity[]
-  dentists     Dentist[]
-  appointments Appointment[]
+  dentists      Dentist[]
+  appointments  Appointment[]
+  notifications Notification[]
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(RECEPTIONIST)
-  avatarUrl String?
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  password       String
+  role           Role      @default(RECEPTIONIST)
+  avatarUrl      String?
   lastBriefingAt DateTime?
-  clinicId  String
-  clinic    Clinic   @relation(fields: [clinicId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  clinicId       String
+  clinic         Clinic    @relation(fields: [clinicId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  interactions Interaction[]
+  interactions  Interaction[]
+  notifications Notification[]
 }
 
 model Patient {
-  id            String    @id @default(cuid())
-  name          String
-  phone         String?
-  email         String?
-  cpf           String?
-  birthDate     DateTime?
-  clinicId      String
-  clinic        Clinic    @relation(fields: [clinicId], references: [id])
-  leadSourceId  String?
-  leadSource    LeadSource? @relation(fields: [leadSourceId], references: [id])
-  lastVisitAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String      @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  cpf          String?
+  birthDate    DateTime?
+  clinicId     String
+  clinic       Clinic      @relation(fields: [clinicId], references: [id])
+  leadSourceId String?
+  leadSource   LeadSource? @relation(fields: [leadSourceId], references: [id])
+  lastVisitAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   opportunities Opportunity[]
   interactions  Interaction[]
-  appointments Appointment[]
+  appointments  Appointment[]
+  anamnesis     Anamnesis?
+  toothRecords  ToothRecord[]
 }
 
 model LeadSource {
@@ -91,28 +95,28 @@ model LeadSource {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  patients     Patient[]
+  patients      Patient[]
   opportunities Opportunity[]
 }
 
 model Opportunity {
-  id              String            @id @default(cuid())
-  treatmentName   String
-  estimatedValue  Float
-  status          OpportunityStatus @default(ACTIVE)
-  notes           String?
-  patientId       String
-  patient         Patient           @relation(fields: [patientId], references: [id])
-  leadSourceId    String?
-  leadSource      LeadSource?       @relation(fields: [leadSourceId], references: [id])
-  clinicId        String
-  clinic          Clinic            @relation(fields: [clinicId], references: [id])
-  lastContactAt   DateTime?
-  wonAt           DateTime?
-  lostAt          DateTime?
-  recoveredAt     DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  treatmentName  String
+  estimatedValue Float
+  status         OpportunityStatus @default(ACTIVE)
+  notes          String?
+  patientId      String
+  patient        Patient           @relation(fields: [patientId], references: [id])
+  leadSourceId   String?
+  leadSource     LeadSource?       @relation(fields: [leadSourceId], references: [id])
+  clinicId       String
+  clinic         Clinic            @relation(fields: [clinicId], references: [id])
+  lastContactAt  DateTime?
+  wonAt          DateTime?
+  lostAt         DateTime?
+  recoveredAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   interactions Interaction[]
 }
@@ -129,6 +133,7 @@ model Interaction {
   user          User?           @relation(fields: [userId], references: [id])
   createdAt     DateTime        @default(now())
 }
+
 // ─── AGENDA ────────────────────────────────────────────────
 
 enum AppointmentStatus {
@@ -152,13 +157,13 @@ model Dentist {
 }
 
 model WorkSchedule {
-  id           String  @id @default(cuid())
-  dentistId    String
-  dayOfWeek    Int     // 0=Dom, 1=Seg ... 6=Sáb
-  startTime    String  // "08:00"
-  endTime      String  // "18:00"
-  slotMinutes  Int     @default(30)
-  dentist      Dentist @relation(fields: [dentistId], references: [id])
+  id          String  @id @default(cuid())
+  dentistId   String
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  slotMinutes Int     @default(30)
+  dentist     Dentist @relation(fields: [dentistId], references: [id])
 }
 
 model Appointment {
@@ -169,7 +174,7 @@ model Appointment {
   startAt      DateTime
   endAt        DateTime
   status       AppointmentStatus @default(SCHEDULED)
-  type         String            // "consulta", "retorno", "implante"...
+  type         String
   notes        String?
   createdViaAI Boolean           @default(false)
   clinic       Clinic            @relation(fields: [clinicId], references: [id])
@@ -178,6 +183,7 @@ model Appointment {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }
+
 model WhatsappConversation {
   id        String   @id @default(cuid())
   phone     String
@@ -187,4 +193,95 @@ model WhatsappConversation {
   updatedAt DateTime @updatedAt
 
   @@index([phone, clinicId])
+}
+
+// ─── NOTIFICAÇÕES ──────────────────────────────────────────
+
+enum NotificationType {
+  PATIENT_ARRIVED
+  APPOINTMENT_BOOKED
+  APPOINTMENT_CANCELLED
+  APPOINTMENT_COMPLETED
+  NO_SHOW
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  clinicId  String
+  clinic    Clinic           @relation(fields: [clinicId], references: [id])
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([clinicId, read, createdAt])
+}
+
+// ─── ANAMNESE ──────────────────────────────────────────────
+
+model Anamnesis {
+  id        String  @id @default(cuid())
+  patientId String  @unique
+  patient   Patient @relation(fields: [patientId], references: [id])
+  clinicId  String
+
+  smoker           Boolean @default(false)
+  alcoholic        Boolean @default(false)
+  brushDaily       Boolean @default(false)
+  flossDaily       Boolean @default(false)
+  physicalActivity Boolean @default(false)
+  sleepProblems    Boolean @default(false)
+
+  allergicToMedication Boolean @default(false)
+  allergicDetail       String?
+  hadSurgery           Boolean @default(false)
+  surgeryDetail        String?
+  pregnant             Boolean @default(false)
+  pregnancyWeeks       Int?
+
+  hypertension       Boolean @default(false)
+  cardiopathy        Boolean @default(false)
+  peripheralArterial Boolean @default(false)
+
+  familyCancer       Boolean @default(false)
+  familyDiabetes     Boolean @default(false)
+  familyHypertension Boolean @default(false)
+  familyOther        Boolean @default(false)
+  familyOtherDetail  String?
+
+  medications String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── ODONTOGRAMA ───────────────────────────────────────────
+
+enum ToothStatus {
+  HEALTHY
+  CAVITY
+  TREATED
+  TO_EXTRACT
+  EXTRACTED
+  IMPLANT
+}
+
+model ToothRecord {
+  id          String      @id @default(cuid())
+  patientId   String
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  clinicId    String
+  toothNumber Int
+  status      ToothStatus
+  description String?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([patientId, toothNumber])
+  @@index([patientId])
 }

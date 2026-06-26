@@ -44,7 +44,10 @@ export function NewAppointmentModal({ clinicId, initialSlot, onClose, onSaved }:
 
   async function fetchPatients() {
     const res = await fetch(`/api/patients?clinicId=${clinicId}`)
-    if (res.ok) setPatients(await res.json())
+    if (res.ok) {
+      const data = await res.json()
+      setPatients(Array.isArray(data) ? data : (data.patients ?? []))
+    }
   }
 
   async function fetchSlots() {

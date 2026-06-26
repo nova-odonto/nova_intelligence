@@ -7,6 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { Topbar } from '@/components/layout/topbar'
 import { NewAppointmentModal } from './components/NewAppointmentModal'
+import { AppointmentDetailDrawer } from './components/AppointmentDetailDrawer'
 
 const localizer = dateFnsLocalizer({
   format,
@@ -16,7 +17,7 @@ const localizer = dateFnsLocalizer({
   locales: { 'pt-BR': ptBR }
 })
 
-const CLINIC_ID = 'demo'
+const CLINIC_ID = 'cmqekbx1q0000tulgf1oypfjw'
 
 export default function SchedulingPage() {
   const [appointments, setAppointments] = useState<any[]>([])
@@ -24,9 +25,12 @@ export default function SchedulingPage() {
   const [date, setDate] = useState(new Date())
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null)
 
   useEffect(() => {
     fetchAppointments()
+    const interval = setInterval(fetchAppointments, 5000)
+    return () => clearInterval(interval)
   }, [date])
 
   async function fetchAppointments() {
@@ -50,6 +54,10 @@ export default function SchedulingPage() {
     setModalOpen(true)
   }
 
+  function handleSelectEvent(event: any) {
+    setSelectedAppointment(event)
+  }
+
   return (
     <>
       <Topbar
@@ -60,7 +68,7 @@ export default function SchedulingPage() {
         <div className="flex justify-end">
           <button
             onClick={() => { setSelectedSlot(null); setModalOpen(true) }}
-            className="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+            className="bg-[#730021] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#8a0027] transition"
           >
             + Novo agendamento
           </button>
@@ -76,6 +84,10 @@ export default function SchedulingPage() {
             onNavigate={setDate}
             selectable
             onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
+            min={new Date(0, 0, 0, 8, 0, 0)}
+            max={new Date(0, 0, 0, 18, 0, 0)}
+            scrollToTime={new Date(0, 0, 0, 8, 0, 0)}
             style={{ height: '100%' }}
             messages={{
               next: 'Próximo',
@@ -97,6 +109,14 @@ export default function SchedulingPage() {
             initialSlot={selectedSlot}
             onClose={() => setModalOpen(false)}
             onSaved={() => { setModalOpen(false); fetchAppointments() }}
+          />
+        )}
+
+        {selectedAppointment && (
+          <AppointmentDetailDrawer
+            appointment={selectedAppointment}
+            onClose={() => setSelectedAppointment(null)}
+            onStatusChanged={fetchAppointments}
           />
         )}
       </main>

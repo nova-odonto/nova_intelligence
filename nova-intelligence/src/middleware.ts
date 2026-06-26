@@ -11,6 +11,7 @@ const protectedRoutes = [
   '/revenue',
   '/scheduling',
   '/settings',
+  '/campaign',
 ]
 
 export async function middleware(req: NextRequest) {

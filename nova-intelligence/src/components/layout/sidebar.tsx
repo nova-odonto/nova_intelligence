@@ -8,7 +8,7 @@ import { useSession, signOut } from 'next-auth/react'
 import {
   LayoutDashboard, TrendingUp, Users, Target,
   GitBranch, FileBarChart, Settings, CalendarDays,
-  ChevronDown, LogOut, Menu, X,
+  ChevronDown, LogOut, Menu, X, MessageCircle, Megaphone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -24,8 +24,10 @@ const navItems: NavItem[] = [
   { href: '/revenue', label: 'Receita', icon: TrendingUp, roles: ['OWNER', 'MANAGER'] },
   { href: '/patients', label: 'Pacientes', icon: Users, roles: ['OWNER', 'MANAGER', 'DENTIST', 'RECEPTIONIST'] },
   { href: '/opportunities', label: 'Oportunidades', icon: Target, roles: ['OWNER', 'MANAGER'] },
+  { href: '/campaign', label: 'Campanhas', icon: Megaphone, roles: ['OWNER', 'MANAGER'] },
   { href: '/sources', label: 'Canais', icon: GitBranch, roles: ['OWNER', 'MANAGER'] },
   { href: '/scheduling', label: 'Agenda', icon: CalendarDays, roles: ['OWNER', 'MANAGER', 'DENTIST', 'RECEPTIONIST'] },
+  { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, roles: ['OWNER', 'MANAGER', 'RECEPTIONIST'] },
   { href: '/briefing', label: 'Briefing Executivo', icon: FileBarChart, roles: ['OWNER'] },
   { href: '/settings', label: 'Configurações', icon: Settings, roles: ['OWNER', 'MANAGER'] },
 ]
