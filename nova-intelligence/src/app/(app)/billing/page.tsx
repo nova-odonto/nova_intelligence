@@ -135,23 +135,11 @@ export default function BillingPage() {
 
   async function handleConfirmCheckout(cpfCnpj: string) {
     if (!checkoutPlan) return
-    setCheckoutLoading(true)
-    try {
-      const res = await fetch('/api/subscription/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: checkoutPlan, cpfCnpj }),
-      })
-      const json = await res.json()
-      if (json.url) {
-        window.open(json.url, '_blank')
-        setCheckoutPlan(null)
-      } else {
-        alert(json.error ?? 'Erro ao gerar link de pagamento.')
-      }
-    } finally {
-      setCheckoutLoading(false)
-    }
+    // Checkout temporariamente congelado: valores dos planos ainda não definidos,
+    // e o link do Asaas expõe o preço real. Não chamar /api/subscription/checkout
+    // até a decisão de pricing ser finalizada.
+    alert('Assinaturas indisponíveis no momento. Em breve liberamos o pagamento por aqui.')
+    setCheckoutPlan(null)
   }
 
   if (loading) return (
