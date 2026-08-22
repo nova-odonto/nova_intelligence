@@ -7,9 +7,19 @@ const DENTIST_ID = 'cmqekbxiu0008tulgyypfpqdv'
 const SLOT_DURATION = 30
 const TZ_OFFSET = '-03:00'
 
-async function getSlotsForDate(date: string, dentistId: string): Promise<string[]> {
+interface WorkScheduleRow { dayOfWeek: number; startTime: string; endTime: string; slotMinutes: number }
+interface AppointmentRow { startAt: Date; endAt: Date }
+
+// Recebe schedules/appointments já carregados em memória (uma única query cada,
+// fora do loop de dias) em vez de consultar o banco por dia — evitava até 28
+// idas e vindas sequenciais ao Supabase (~15s) pra montar a disponibilidade.
+function getSlotsForDate(
+  date: string,
+  schedulesByDay: Map<number, WorkScheduleRow>,
+  appointments: AppointmentRow[]
+): string[] {
   const dayOfWeek = new Date(date + 'T12:00:00').getDay()
-  const schedule = await prisma.workSchedule.findFirst({ where: { dentistId, dayOfWeek } })
+  const schedule = schedulesByDay.get(dayOfWeek)
   if (!schedule) return []
 
   // Sempre usar offset explícito -03:00 (Brasília), igual ao /api/whatsapp/book.
@@ -17,10 +27,7 @@ async function getSlotsForDate(date: string, dentistId: string): Promise<string[
   // o que causava um desalinhamento de 3h entre disponibilidade e agendamentos reais.
   const dayStart = new Date(`${date}T00:00:00${TZ_OFFSET}`)
   const dayEnd = new Date(`${date}T23:59:59${TZ_OFFSET}`)
-
-  const existing = await prisma.appointment.findMany({
-    where: { dentistId, status: { in: ['SCHEDULED', 'CONFIRMED'] }, startAt: { gte: dayStart, lte: dayEnd } }
-  })
+  const existing = appointments.filter(a => a.startAt >= dayStart && a.startAt <= dayEnd)
 
   const slots: string[] = []
   const [startH, startM] = schedule.startTime.split(':').map(Number)
@@ -61,12 +68,26 @@ export async function GET(req: NextRequest) {
   const semanaAtualFim = endOfWeek(now, { weekStartsOn: 1 })
   const semanaProximaFim = endOfWeek(addDays(semanaAtualFim, 1), { weekStartsOn: 1 })
 
+  // Busca schedules (no máx. 7, um por dia da semana) e agendamentos da janela
+  // inteira de 14 dias de uma vez só, em paralelo — em vez de 2 queries por dia.
+  const rangeStart = new Date(`${dates[0]}T00:00:00${TZ_OFFSET}`)
+  const rangeEnd = new Date(`${dates[dates.length - 1]}T23:59:59${TZ_OFFSET}`)
+
+  const [schedules, appointments] = await Promise.all([
+    prisma.workSchedule.findMany({ where: { dentistId: DENTIST_ID } }),
+    prisma.appointment.findMany({
+      where: { dentistId: DENTIST_ID, status: { in: ['SCHEDULED', 'CONFIRMED'] }, startAt: { gte: rangeStart, lte: rangeEnd } },
+      select: { startAt: true, endAt: true }
+    })
+  ])
+  const schedulesByDay = new Map(schedules.map(s => [s.dayOfWeek, s]))
+
   const slotsAtual: { date: string; slot: string }[] = []
   const slotsProxima: { date: string; slot: string }[] = []
 
   for (const date of dates) {
     const dateObj = new Date(date + 'T12:00:00')
-    const slots = await getSlotsForDate(date, DENTIST_ID)
+    const slots = getSlotsForDate(date, schedulesByDay, appointments)
 
     const slotsValidos = date === today
       ? slots.filter(s => { const [h, m] = s.split(':').map(Number); return (h * 60 + m) > horaAtual + 30 })
